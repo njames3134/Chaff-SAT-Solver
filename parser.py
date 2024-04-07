@@ -12,8 +12,9 @@ class Parser():
         with open(filename, 'r') as file:
             for line in file.readlines():
                 if (line.startswith('p')):
-                    _, _, num_lits, _ = line.split()
+                    _, _, num_lits, num_clauses = line.split()
                     self.numLits = int(num_lits)
+                    self.numClauses = int(num_clauses)
                 elif(line.startswith('c')):
                     pass
                 else:
@@ -29,6 +30,5 @@ class Parser():
 
                     self.clauses.append(clause)
 
-        self.numClauses = len(self.clauses)
         return
                     
