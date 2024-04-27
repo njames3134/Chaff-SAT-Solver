@@ -57,7 +57,6 @@ class CHAFF:
         for i in range(self.numClauses):
             if (self.clauses[i].state != ClauseState.SAT):
                 return 0
-            
         return 1
     
     def updateSAT(self, lit):
@@ -65,7 +64,7 @@ class CHAFF:
             if (self.clauses[j].state != ClauseState.SAT and lit in self.clauses[j].lits):
                 self.clauses[j].state = ClauseState.SAT
 
-    def solve(self):
+    def preprocess(self):
         preProc = 0
         for i in range(self.numClauses): # Preprocessing, Remove unit clauses and assign states accordingly
             if (self.clauses[i].numLits == 1):
@@ -75,10 +74,10 @@ class CHAFF:
                 self.clauses.pop(i)
                 self.pos.pop(i)
                 preProc = 1 # Preprocessed, try those first
-            
-        if (preProc == 0):
-            self.states[0] = -1 # Start with X1 = F
 
+        return preProc
+
+    def bcp(self): # TODO
         stateArrIdx = 0
         prevState = self.states.copy()
         # Resolve Conflicts
@@ -105,25 +104,32 @@ class CHAFF:
                     self.statesNoMod[stateArrIdx] = 1
                     curClause.state = ClauseState.SAT
                     break
-
                 i += 1
                 
             if (prevState == self.states):
                 break
-
             prevState = self.states.copy()
 
-            # Try states until fully SAT
-            for i in range(self.numLits):
-                if (self.statesNoMod[i] != 1):
-                    self.states[i] = -(i + 1) # Try Xi = F first
-                    self.updateSAT(-i)
-                    if (self.checkAllSAT()):
-                        return 1
-                    self.states[i] = i + 1
-                    self.updateSAT(i)
-                    if (self.checkAllSAT()):
-                        return 1
+    def solve(self):
+        if (self.preprocess() == 0):
+            self.states[0] = -1 # Start with X1 = F
+
+        # Try states until fully SAT
+        for i in range(self.numLits):
+            self.bcp()
+            if (self.statesNoMod[i] == 1):
+                self.updateSAT(self.states[i])
+                if (self.checkAllSAT()):
+                    return 1
+            elif (self.statesNoMod[i] != 1):
+                self.states[i] = -(i + 1) # Try Xi = F first
+                self.updateSAT(-i)
+                if (self.checkAllSAT()):
+                    return 1
+                self.states[i] = i + 1
+                self.updateSAT(i)
+                if (self.checkAllSAT()):
+                    return 1
 
         return 0
                 

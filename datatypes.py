@@ -17,3 +17,7 @@ class Clause():
             return
         self.lits.append(lit)
         self.numLits += 1
+
+    def removeLit(self, idx):
+        self.lits.pop(idx)
+        self.numLits -= 1

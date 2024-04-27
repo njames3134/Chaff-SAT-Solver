@@ -25,8 +25,21 @@ class Parser():
                     clause.lits.sort(key=lambda x: x)
                     clause.lits.sort(key=lambda x: abs(x))
 
-                    # TODO: remove redundant literals
-
+                    # De-duplicate
+                    litsLen = len(clause.lits)
+                    i = 0
+                    while i < litsLen - 1:
+                        if (clause.lits[i] == clause.lits[i + 1]):
+                            clause.removeLit(i + 1)
+                            litsLen -= 1
+                            i -= 1
+                        elif (clause.lits[i] == -clause.lits[i + 1]):
+                            clause.removeLit(i + 1)
+                            clause.removeLit(i)
+                            litsLen -= 2
+                            i -= 1
+                        i += 1
+                        
                     self.clauses.append(clause)
 
         return
