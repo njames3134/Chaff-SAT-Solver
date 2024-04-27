@@ -2,9 +2,8 @@ from datatypes import Clause
 
 
 class Parser():
-    def init(self):
+    def __init__(self):
         self.numLits = 0
-        self.literals = []
         self.numClauses = 0
         self.clauses = []
 
@@ -23,8 +22,8 @@ class Parser():
                         clause.addLit(int(lit))
 
                     # Organize the literals
-                    clause.lits.sort(key=lambda x: x)
-                    clause.lits.sort(key=lambda x: abs(x))
+                    # clause.lits.sort(key=lambda x: x)
+                    # clause.lits.sort(key=lambda x: abs(x))
 
                     # TODO: remove redundant literals
 
@@ -32,3 +31,4 @@ class Parser():
 
         return
                     
+ # type: ignore

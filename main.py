@@ -13,11 +13,15 @@ if __name__ == "__main__":
 
     # Parse input file
     parser = Parser()
+
+    # Tmp
+    args.input = "./Inputs/random_v5c5.cnf"
+    args.solver = "chaff"
     parser.parse(args.input)
 
     if args.solver == 'chaff':
         print("Running CHAFF solver:")
-        solver = CHAFF()
+        solver = CHAFF(parser)
     elif args.solver == 'dpll':
         print("Running DPLL solver:")
         solver = DPLL(parser)
