@@ -53,6 +53,18 @@ class CHAFF:
     def add_clause(self, clause):
         self.clauses.append(clause)
 
+    def checkAllSAT(self):
+        for i in range(self.numClauses):
+            if (self.clauses[i].state != ClauseState.SAT):
+                return 0
+            
+        return 1
+    
+    def updateSAT(self, lit):
+        for j in range(self.numClauses):
+            if (self.clauses[j].state != ClauseState.SAT and lit in self.clauses[j].lits):
+                self.clauses[j].state = ClauseState.SAT
+
     def solve(self):
         preProc = 0
         for i in range(self.numClauses): # Preprocessing, Remove unit clauses and assign states accordingly
@@ -64,7 +76,6 @@ class CHAFF:
                 self.pos.pop(i)
                 preProc = 1 # Preprocessed, try those first
             
-        # Iterate until a conflict is hit
         if (preProc == 0):
             self.states[0] = -1 # Start with X1 = F
 
@@ -102,9 +113,17 @@ class CHAFF:
 
             prevState = self.states.copy()
 
-        # Try states until fully SAT
-        for i in range(self.numLits):
-            if (self.statesNoMod[i] != 1):
-                for j in range(self.numClauses):
-                    if (self.clauses[j].)
+            # Try states until fully SAT
+            for i in range(self.numLits):
+                if (self.statesNoMod[i] != 1):
+                    self.states[i] = -(i + 1) # Try Xi = F first
+                    self.updateSAT(-i)
+                    if (self.checkAllSAT()):
+                        return 1
+                    self.states[i] = i + 1
+                    self.updateSAT(i)
+                    if (self.checkAllSAT()):
+                        return 1
 
+        return 0
+                

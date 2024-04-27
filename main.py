@@ -15,7 +15,7 @@ if __name__ == "__main__":
     parser = Parser()
 
     # Tmp
-    args.input = "./Inputs/random_v5c5.cnf"
+    args.input = "./Inputs/random_v12c257.cnf"
     args.solver = "chaff"
     parser.parse(args.input)
 
@@ -30,4 +30,9 @@ if __name__ == "__main__":
         exit(0)
 
     # Run the solver
-    solver.solve()
+    resSAT = solver.solve()
+    if (resSAT):
+        print("Satisfiable")
+        print("Assignments:", solver.states)
+    else:
+        print("Unsatisfiable")

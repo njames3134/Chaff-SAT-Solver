@@ -22,8 +22,8 @@ class Parser():
                         clause.addLit(int(lit))
 
                     # Organize the literals
-                    # clause.lits.sort(key=lambda x: x)
-                    # clause.lits.sort(key=lambda x: abs(x))
+                    clause.lits.sort(key=lambda x: x)
+                    clause.lits.sort(key=lambda x: abs(x))
 
                     # TODO: remove redundant literals
 
