@@ -56,8 +56,11 @@ class DPLL:
 
     def forward(self):
         # find unit clause and assign it
+        none_count = 0
         for c in self.clauses:
-            none_count = c.lits.count(None)
+            for lit in c.lits:
+                if self.assign_list[lit] == None:
+                    none_count += 1
             if none_count == 1:
                 lit = c.lits.index(None)
                 self.assign_stack.append(abs(lit))
