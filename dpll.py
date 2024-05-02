@@ -65,7 +65,9 @@ class DPLL:
                 c.state = ClauseState.SAT
                 return
 
-        self.assign_stack.append(self.assign_queue.pop())
+        lit = self.assign_queue.pop()
+        self.assign_stack.append(lit)
+        self.assign_list[lit] = lit 
 
         return
 
