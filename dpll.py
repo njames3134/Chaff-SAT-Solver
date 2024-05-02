@@ -57,14 +57,17 @@ class DPLL:
     def forward(self):
         # find unit clause and assign it
         for c in self.clauses:
-            abs_lits = [abs(literal) for literal in c.lits]
-            for lit in abs_lits:
-                # find unassigned variable in any clause and assign it
-                
-                # update assign_stack and assign_list
+            none_count = c.lits.count(None)
+            if none_count == 1:
+                lit = c.lits.index(None)
+                self.assign_stack.append(abs(lit))
+                self.assign_list[abs(lit)] = lit
+                c.state = ClauseState.SAT
+                return
 
-                pass
-        pass
+        self.assign_stack.append(self.assign_queue.pop())
+
+        return
 
     def next_literal(self):
         # Check if SAT
