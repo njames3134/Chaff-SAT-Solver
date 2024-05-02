@@ -1,13 +1,11 @@
 from datatypes import *
 
-
 class DPLL:
     def __init__(self, parser):
         self.sat = False
         self.numLits = parser.numLits
         self.numClauses = parser.numClauses
         self.clauses = parser.clauses
-        self.assign_queue = [++i for i in range(1, parser.numLits + 1)] # initially order the assign list from 1 to number of lits
         self.assign_list = {}
         self.assign_stack = []
 
@@ -22,21 +20,33 @@ class DPLL:
     def add_clause(self, clause):
         self.clauses.append(clause)
 
-    def backtrack(self): # 
-        # debugging
-        self.assign_list[1] = 0
-        self.assign_list[2] = 1
-        self.assign_stack = [1,2]
+    def update_clause(self, clause):
+        for lit in clause.lits:
+            if self.assign_list[abs(lit)] is None:
+                clause.state = ClauseState.UNRES
+                return
+            elif (lit > 0 and self.assign_list[abs(lit)]) or (lit < 0 and not self.assign_list[abs(lit)]): 
+                clause.state = ClauseState.SAT
+                return
+            else:
+                clause.state = ClauseState.UNSAT
+                continue
+        return
 
+    def backtrack(self):
         # move up the tree to first lit assigned 1 and assign it 0
         for lit in self.assign_stack[::-1]:
-            if (self.assign_list[lit] == 1):
+            if (self.assign_list[lit] == 0):
                 self.assign_list[lit] = None
-            elif (self.assign_list[lit] == 0):
-                self.assign_list[lit] = 1
+            elif (self.assign_list[lit] == 1):
+                self.assign_list[lit] = 0
                 break
-            else: #TODO: This is the case when backtracking on the last variable all the way to root, need to return unsat and end program
-                print("Error: got a None assignment during backtrack")
+            else:
+                return False
+
+        # whole tree is None, cant backtrack anymore
+        if self.assign_list[self.assign_stack[0]] is None:
+            return False
 
         # update the stack by removing assignments after backtrack
         assign_index = self.assign_stack.index(lit)
@@ -52,27 +62,33 @@ class DPLL:
             for lit in updated_lits:
                 c.state = ClauseState.UNRES if lit in abs_lits else c.state
 
-        return
+        return True
 
     def forward(self):
         # find unit clause and assign it
-        none_count = 0
-        for c in self.clauses:
-            for lit in c.lits:
-                if self.assign_list[lit] == None:
-                    none_count += 1
-            if none_count == 1:
-                lit = c.lits.index(None)
-                self.assign_stack.append(abs(lit))
-                self.assign_list[abs(lit)] = lit
-                c.state = ClauseState.SAT
-                return
+        # none_count = 0
+        # for c in self.clauses:
+        #     for lit in c.lits:
+        #         if self.assign_list[abs(lit)] == None:
+        #             none_count += 1
+        #             break
+        #     if none_count == 1:
+        #         self.assign_stack.append(abs(lit))
+        #         self.assign_list[abs(lit)] = 1 if lit > 0 else 0
+        #         c.state = ClauseState.SAT
+        #         print(f"assign: x{lit} = {lit > 0}")
+        #         return True
 
-        lit = self.assign_queue.pop()
-        self.assign_stack.append(lit)
-        self.assign_list[lit] = lit 
-
-        return
+        # if no unit clause, find next None in assign list
+        lit = 1
+        for lit, val in self.assign_list.items():
+            if val is None:
+                self.assign_list[lit] = 1
+                self.assign_stack.append(lit)
+                print(f"assign: x{lit} = True")
+                return True
+        print("no None lits left")
+        return False
 
     def next_literal(self):
         # Check if SAT
@@ -84,15 +100,32 @@ class DPLL:
             return False
 
         self.forward()
+        for c in self.clauses:
+            self.update_clause(c)
+            if c.state == ClauseState.UNSAT:
+                if not self.backtrack():
+                    return False
 
-        # Backtrack
-        self.backtrack
-
-        # Forward
+        # return False
+        return True
 
     def solve(self):
-        self.backtrack()
-        # print(self.assign_queue)
         while self.next_literal():
             pass
-        pass
+
+        for lit, val in self.assign_list.items():
+            if val is None:
+                self.assign_list[lit] = 0
+
+        count = 0
+        for c in self.clauses:
+            self.update_clause(c)
+            count += c.state == ClauseState.SAT
+
+        
+        if count == self.numClauses:
+            self.sat = 1
+        else:
+            self.sat = 0
+        print(self.assign_list)
+        return
