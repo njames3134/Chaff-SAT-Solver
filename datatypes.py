@@ -11,6 +11,8 @@ class Clause():
         self.lits = []
         self.numLits = 0
         self.state = ClauseState.UNRES
+        self.watched = [0, 1]
+        self.unit = False
 
     def addLit(self, lit):
         if (lit == 0):

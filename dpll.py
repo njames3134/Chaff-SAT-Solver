@@ -85,9 +85,7 @@ class DPLL:
             if val is None:
                 self.assign_list[lit] = 1
                 self.assign_stack.append(lit)
-                print(f"assign: x{lit} = True")
                 return True
-        print("no None lits left")
         return False
 
     def next_literal(self):
@@ -106,10 +104,47 @@ class DPLL:
                 if not self.backtrack():
                     return False
 
-        # return False
+        return True
+
+    def preprocess(self):
+        # assign all single lit clauses
+        implications = set()
+        for clause in self.clauses:
+            if clause.numLits == 1:
+                lit = abs(clause.lits[0])
+                self.assign_list[lit] = lit == clause.lits[0]
+                if lit in implications and clause.lits[0] not in implications: # unsat single lit clauses
+                    return False
+                implications.add(clause.lits[0])
+                self.numClauses -= 1
+        
+        # remove single lit clauses
+        self.clauses = [clause for clause in self.clauses if clause.numLits != 1]
+
+        # see if already unsat from unit clauses and find all new sat clauses
+        sat_clauses = []
+        for clause in self.clauses:
+            unsat_count = 0
+            for lit in clause.lits:
+                if (lit == abs(lit)) == self.assign_list[abs(lit)]:
+                    sat_clauses.append(self.clauses.index(clause))
+                    break
+                elif self.assign_list[abs(lit)] is not None:
+                    unsat_count += 1
+            if unsat_count == clause.numLits:
+                return False
+
+        # remove sat clauses
+        if len(sat_clauses) != 0:
+            self.clauses = [clause for i, clause in enumerate(self.clauses) if i not in sat_clauses]
+
         return True
 
     def solve(self):
+        if not self.preprocess():
+            self.sat = 0
+            return
+
         while self.next_literal():
             pass
 

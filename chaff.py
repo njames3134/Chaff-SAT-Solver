@@ -3,98 +3,248 @@ from datatypes import *
 class CHAFF:
     def __init__(self, parser):
         self.sat = False
-        self.numLits = parser.numLits # Tracks total number of literals
-        self.numClauses = parser.numClauses # Tracks total number of clauses
-        self.clauses = parser.clauses # List of all clauses (each is a clause object)
-        self.states = [] # Track the assignment state of each literal, 0 = X, -n = F for Xn, n = T for Xn
-        self.statesNoMod = [] # Track BCP derived states
-        for i in range(self.numLits):
-            self.states.append(0)
-            self.statesNoMod.append(0)
-        self.pos = [] # Track the watchlist index of each clause, initially watching index 0 and 1 for all
-        for i in range(self.numClauses):
-            self.pos.append([0, 1])
+        self.numLits = parser.numLits
+        self.numClauses = parser.numClauses
+        self.clauses = parser.clauses
+        self.assign_list = {}
+        self.assign_stack = []
+        self.bcp_success = 1
+        self.implied_lits = []
+
+        # generate set of unique lits for assign_list initiallized to None
+        lits = set()
+        for c in self.clauses:
+            for value in iter(c.lits):
+                lits.add(abs(value))
+        for var in lits:
+            self.assign_list[var] = None
+
+        for clause in self.clauses:
+            clause.watched = [0, 1]
 
     def add_clause(self, clause):
         self.clauses.append(clause)
 
-    def checkAllSAT(self):
-        for i in range(self.numClauses):
-            if (self.clauses[i].state != ClauseState.SAT):
-                return 0
-        return 1
-    
-    def updateSAT(self, lit):
-        for j in range(self.numClauses):
-            if (self.clauses[j].state != ClauseState.SAT and lit in self.clauses[j].lits):
-                self.clauses[j].state = ClauseState.SAT
+    def is_unit(self, clause):
+        unsat_count = 0
+        for lit in clause.lits:
+            if (lit == abs(lit)) == self.assign_list[abs(lit)]:
+                continue
+            elif self.assign_list[abs(lit)] is not None:
+                unsat_count += 1
+        return (unsat_count == clause.numLits - 1)
 
-    def preprocess(self):
-        preProc = 0
-        for i in range(self.numClauses): # Preprocessing, Remove unit clauses and assign states accordingly
-            if (self.clauses[i].numLits == 1):
-                self.states[abs(self.clauses[i].lits[0]) - 1] = self.clauses[i].lits[0] # Assign state
-                self.statesNoMod[abs(self.clauses[i].lits[0]) - 1] = 1 # Can't modify that
-                self.numClauses -= 1
-                self.clauses.pop(i)
-                self.pos.pop(i)
-                preProc = 1 # Preprocessed, try those first
-
-        return preProc
-
-    def bcp(self): # TODO
-        stateArrIdx = 0
-        prevState = self.states.copy()
-        # Resolve Conflicts
-        while True:
-            i = 0
-            while i < self.numClauses:
-                curPos = self.pos[i]
-                curState = self.states[stateArrIdx]
-                curClause = self.clauses[i]
-                if (curPos[0] >= curClause.numLits or curPos[1] >= curClause.numLits):
-                    break
-
-                for j in range(self.numLits):
-                    curState = self.states[j]
-                    if (curPos[0] < curClause.numLits and curState == -curClause.lits[curPos[0]]):
-                        curPos[0] = curPos[1]
-                        curPos[1] += 1
-                    elif (curPos[1] < curClause.numLits and curState == -curClause.lits[curPos[1]]):
-                        curPos[1] += 1
-
-                if (curPos[1] == curClause.numLits): # Unit Clause, add new state, break from loop
-                    stateArrIdx = abs(curClause.lits[curClause.numLits - 1]) - 1
-                    self.states[stateArrIdx] = curClause.lits[curClause.numLits - 1]
-                    self.statesNoMod[stateArrIdx] = 1
-                    curClause.state = ClauseState.SAT
-                    break
-                i += 1
-                
-            if (prevState == self.states):
+    def move_watched(self, clause, lit):
+        idx = clause.lits.index(lit) 
+        for i, lit in enumerate(clause.lits):
+            if i != clause.watched[0] and i != clause.watched[1] and self.assign_list[abs(lit)] is None:
+                clause.watched.remove(idx)
+                clause.watched.append(i)
                 break
-            prevState = self.states.copy()
+        return
+
+    def update_watched(self, clause):
+        # only process a clause if one literal is set to false, ignore true/unassigned       
+        clause.is_unit = False
+
+        if clause.state == ClauseState.SAT:
+            return
+
+        # get status of the watched literals
+        lit1 = clause.lits[clause.watched[0]]
+        lit2 = clause.lits[clause.watched[1]]
+        if self.assign_list[abs(lit1)] is None:
+            val1 = None
+        else:
+            val1 = self.assign_list[abs(lit1)] == lit1
+
+        if self.assign_list[abs(lit2)] is None:
+            val2 = None
+        else:
+            val2 = self.assign_list[abs(lit2)] == lit2
+
+        # decide how to move watched index
+        if val1 is None and val2 is None:
+            return
+        elif val1 or val2:
+            clause.state = ClauseState.SAT
+            return
+        else:
+            if not val1: self.move_watched(clause, lit1)
+            if not val2: self.move_watched(clause, lit2)
+        
+        # get number of unassigned literals in the clause
+        none_count = 0
+        for lit in clause.lits:
+            if self.assign_list[abs(lit)] is None:
+                none_count += 1
+            elif (lit == abs(lit)) == self.assign_list[abs(lit)]:
+                clause.state = ClauseState.SAT
+                return
+
+        if clause.state != ClauseState.SAT and none_count == 0:
+            clause.state = ClauseState.UNSAT
+        elif clause.state != ClauseState.SAT and none_count == 1:
+            clause.is_unit = True
+        
+        return
+        
+    def preprocess(self):
+        # assign all single lit clauses
+        implications = set()
+        for clause in self.clauses:
+            if clause.numLits == 1:
+                lit = abs(clause.lits[0])
+                self.assign_list[lit] = 1 if lit == clause.lits[0] else 0
+                if lit in implications and clause.lits[0] not in implications: # unsat single lit clauses
+                    return False
+                implications.add(clause.lits[0])
+                self.numClauses -= 1
+        
+        # remove single lit clauses
+        self.clauses = [clause for clause in self.clauses if clause.numLits != 1]
+
+        # see if already unsat from unit clauses and find all new sat clauses
+        sat_clauses = []
+        for clause in self.clauses:
+            unsat_count = 0
+            for lit in clause.lits:
+                if (lit == abs(lit)) == self.assign_list[abs(lit)]:
+                    sat_clauses.append(self.clauses.index(clause))
+                    break
+                elif self.assign_list[abs(lit)] is not None:
+                    unsat_count += 1
+            if unsat_count == clause.numLits:
+                return False
+
+        # remove sat clauses
+        if len(sat_clauses) != 0:
+            self.numClauses -= len(sat_clauses)
+            self.clauses = [clause for i, clause in enumerate(self.clauses) if i not in sat_clauses]
+
+        return True
+
+    def backtrack(self):
+        # move up the tree to first lit assigned 1 and assign it 0
+        for lit in self.assign_stack[::-1]:
+            # undo bcp implications first
+            if abs(lit) in self.implied_lits:                 
+                self.implied_lits.remove(abs(lit))
+                self.assign_list[abs(lit)] = None
+                continue
+            # then move up the assignment tree
+            elif (self.assign_list[abs(lit)] == 0): 
+                self.assign_list[abs(lit)] = None
+            elif (self.assign_list[abs(lit)] == 1):
+                self.assign_list[abs(lit)] = 0
+                break
+            else:
+                return False
+
+        # whole tree is None, cant backtrack anymore
+        if self.assign_list[self.assign_stack[0]] is None:
+            return False
+
+        # update the stack by removing assignments after backtrack
+        assign_index = self.assign_stack.index(lit)
+        updated_lits = self.assign_stack[assign_index:]
+        self.assign_stack = self.assign_stack[:assign_index + 1]
+
+        # reset assignment for everything not in the stack
+        self.assign_list = {lit: None if lit not in self.assign_stack else self.assign_list[lit] for lit in self.assign_list}
+
+        # update clause states for clauses that contained changed lits
+        for c in self.clauses:
+            abs_lits = [abs(literal) for literal in c.lits]
+            for lit in updated_lits:
+                c.state = ClauseState.UNRES if lit in abs_lits else c.state
+
+        return True
+
+    def bcp(self):
+        # find all implications
+        sat_count = 0
+        implications = set()
+        for clause in self.clauses:
+            self.update_watched(clause)
+
+            if clause.state == ClauseState.SAT:
+                sat_count += 1
+                continue
+
+            # add all valid implications
+            elif self.is_unit(clause):
+                for lit in clause.lits:
+                    if self.assign_list[abs(lit)] is None:
+                        if -lit in implications:
+                            self.bcp_success = 0
+                            return False
+                        implications.add(lit)
+                        break
+
+        # return if sat
+        if sat_count == self.numClauses:
+            self.bcp_success = False
+            self.sat = 1
+            return False
+
+        # return to assign new literal, no more implications
+        if len(implications) == 0:
+            self.bcp_success = 0
+            return True
+
+        # assign the generated implications
+        for imply in implications:
+            self.assign_list[abs(imply)] = 1 if abs(imply) == imply else 0
+            self.assign_stack.append(abs(imply))
+            self.implied_lits.append(abs(imply))
+
+        self.bcp_success = 1
+        return True
+
+    def forward(self):
+        # find next None in assign list
+        lit = 1
+        self.implied_lits = []
+        for lit, val in self.assign_list.items():
+            if val is None:
+                self.assign_list[lit] = 1
+                self.assign_stack.append(lit)
+                return True
+        return False
+
+    def next_literal(self):
+
+        self.bcp_success = 1
+        valid = 1
+        while self.bcp_success:
+            valid = self.bcp()
+
+        if self.sat:
+            return False
+        elif not valid: # need to backtrack
+            if not self.backtrack():
+                return False
+            for clause in self.clauses: # reset watched literals
+                clause.watched = [0, 1]
+        elif self.bcp_success == 0: # need to assign new literal
+            self.forward()
+
+        return True
 
     def solve(self):
-        if (self.preprocess() == 0):
-            self.states[0] = -1 # Start with X1 = F
+        if not self.preprocess():
+            self.sat = 0
+            return
 
-        # Try states until fully SAT
-        for i in range(self.numLits):
-            self.bcp()
-            if (self.statesNoMod[i] == 1):
-                self.updateSAT(self.states[i])
-                if (self.checkAllSAT()):
-                    return 1
-            elif (self.statesNoMod[i] != 1):
-                self.states[i] = -(i + 1) # Try Xi = F first
-                self.updateSAT(-i)
-                if (self.checkAllSAT()):
-                    return 1
-                self.states[i] = i + 1
-                self.updateSAT(i)
-                if (self.checkAllSAT()):
-                    return 1
+        while self.next_literal():
+            pass
+
+        for lit, val in self.assign_list.items():
+            if val is None:
+                self.assign_list[lit] = 0
+
+        print(self.assign_list)
 
         return 0
 

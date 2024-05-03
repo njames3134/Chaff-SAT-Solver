@@ -14,8 +14,8 @@ if __name__ == "__main__":
     # Tmp
     benchmark = sys.argv[1]
 
-    input = f"./benchmarks/{benchmark}"
-    solver = "dpll"
+    input = f"./{benchmark}"
+    solver = "chaff"
     parser.parse(input)
     vParser.parse(input)
 
@@ -56,17 +56,3 @@ if __name__ == "__main__":
 
     if not vParser.clauses:
         print("SAT")
-
-    # unsatCt = 0
-    # unsatIdx = []
-    # for i in range(vParser.numClauses):
-    #     if (vParser.clauses[i].state != ClauseState.SAT):
-    #         unsatCt += 1
-    #         unsatIdx.append(i)
-    #         verifySAT = 0
-
-    # if (verifySAT != resSAT):
-    #     print("Wrong Results")
-    # else:
-    #     print("Correct Results")
-
