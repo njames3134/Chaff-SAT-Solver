@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class ClauseState(Enum):
     SAT = "Satisfiable"
     UNSAT = "Unsatisfiable"

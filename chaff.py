@@ -10,6 +10,8 @@ class CHAFF:
         self.assign_stack = []
         self.bcp_success = 1
         self.implied_lits = []
+        self.scores = {}
+        self.decay = 0.75
 
         # generate set of unique lits for assign_list initiallized to None
         lits = set()
@@ -21,6 +23,9 @@ class CHAFF:
 
         for clause in self.clauses:
             clause.watched = [0, 1]
+        
+        for lit in range(1, parser.numLits):
+            self.scores[lit] = 1
 
     def add_clause(self, clause):
         self.clauses.append(clause)
@@ -122,6 +127,11 @@ class CHAFF:
             self.numClauses -= len(sat_clauses)
             self.clauses = [clause for i, clause in enumerate(self.clauses) if i not in sat_clauses]
 
+        # update the scores
+        for clause in self.clauses:
+            for lit in clause.lits:
+                self.scores[abs(lit)] += 1
+
         return True
 
     def backtrack(self):
@@ -158,6 +168,13 @@ class CHAFF:
             abs_lits = [abs(literal) for literal in c.lits]
             for lit in updated_lits:
                 c.state = ClauseState.UNRES if lit in abs_lits else c.state
+
+        for clause in self.clauses:
+            if clause.state == ClauseState.UNRES:
+                for lit in clause.lits:
+                    self.scores[abs(lit)] += 1
+        for lit, _ in self.scores.items():
+            self.scores[lit] *= self.decay
 
         return True
 
@@ -203,18 +220,16 @@ class CHAFF:
         return True
 
     def forward(self):
-        # find next None in assign list
-        lit = 1
-        self.implied_lits = []
-        for lit, val in self.assign_list.items():
-            if val is None:
+        # find next largest scored literal and assign 1
+        for lit in sorted(self.scores.items(), key=lambda x: -x[1]):
+            lit = int(lit[0])
+            if self.assign_list[lit] == None:
                 self.assign_list[lit] = 1
                 self.assign_stack.append(lit)
                 return True
         return False
 
     def next_literal(self):
-
         self.bcp_success = 1
         valid = 1
         while self.bcp_success:
@@ -237,7 +252,11 @@ class CHAFF:
             self.sat = 0
             return
 
+        score_count = 0
         while self.next_literal():
+            score_count += 1
+            if score_count % 5 == 0:
+                self.decay *= self.decay
             pass
 
         for lit, val in self.assign_list.items():
@@ -247,4 +266,3 @@ class CHAFF:
         print(self.assign_list)
 
         return 0
-
