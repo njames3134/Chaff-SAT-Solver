@@ -65,20 +65,6 @@ class DPLL:
         return True
 
     def forward(self):
-        # find unit clause and assign it
-        # none_count = 0
-        # for c in self.clauses:
-        #     for lit in c.lits:
-        #         if self.assign_list[abs(lit)] == None:
-        #             none_count += 1
-        #             break
-        #     if none_count == 1:
-        #         self.assign_stack.append(abs(lit))
-        #         self.assign_list[abs(lit)] = 1 if lit > 0 else 0
-        #         c.state = ClauseState.SAT
-        #         print(f"assign: x{lit} = {lit > 0}")
-        #         return True
-
         # if no unit clause, find next None in assign list
         lit = 1
         for lit, val in self.assign_list.items():
@@ -162,5 +148,13 @@ class DPLL:
             self.sat = 1
         else:
             self.sat = 0
-        print(self.assign_list)
+
+        if self.sat:
+            print("RESULT: SAT")
+            print("ASSIGNMENT: ", end = '')
+            for key, value in self.assign_list.items():
+                print(f'{key}={value}', end=' ')
+            print()
+        else:
+            print("RESULT: UNSAT")
         return
