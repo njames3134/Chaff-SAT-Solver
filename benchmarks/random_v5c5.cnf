@@ -1,7 +1,0 @@
-c Here is a file called ./benchmarks/random_v5c5.cnf
-p cnf 5 5
-2 3 1 4 5 0
-1 2 -3 0
-1 -2 0
--1 4 0
--1 0
