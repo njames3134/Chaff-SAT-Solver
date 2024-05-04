@@ -190,7 +190,7 @@ class CHAFF:
                 continue
 
             # add all valid implications
-            elif self.is_unit(clause):
+            elif clause.is_unit:
                 for lit in clause.lits:
                     if self.assign_list[abs(lit)] is None:
                         if -lit in implications:
@@ -263,6 +263,13 @@ class CHAFF:
             if val is None:
                 self.assign_list[lit] = 0
 
-        print(self.assign_list)
+        if self.sat:
+            print("RESULT: SAT")
+            print("ASSIGNMENT: ", end = '')
+            for key, value in self.assign_list.items():
+                print(f'{key}={value}', end=' ')
+            print()
+        else:
+            print("RESULT: UNSAT")
 
         return 0
