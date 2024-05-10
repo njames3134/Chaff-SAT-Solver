@@ -24,7 +24,7 @@ class CHAFF:
         for clause in self.clauses:
             clause.watched = [0, 1]
         
-        for lit in range(1, parser.numLits):
+        for lit in range(1, parser.numLits + 1):
             self.scores[lit] = 1
 
     def add_clause(self, clause):
